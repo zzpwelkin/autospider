@@ -9,9 +9,9 @@ import sys
 import requests
 from lxml import html
 
-from spiderframework import Item, Field, log
-from spiderframework import processors, default_logger, save_driver
-# from spiderframework.storage import save_driver
+from spiderflow import Item, Field, log
+from spiderflow import processors, default_logger, save_driver
+# from spiderflow.storage import save_driver
 
 # set max recursion number
 sys.setrecursionlimit(3000) 
@@ -55,7 +55,7 @@ class AtomicSpiderBase(object):
 
     def download(self, url):
         req = requests.get(url)
-        return req.content
+        return req.text
 
     def get_item(self):
         fields = dict([(f,Field()) for f in self.elems.keys() if f!='base'])
@@ -74,16 +74,12 @@ class AtomicSpiderBase(object):
         
     def _loader_context(self, context_str):
         try:
-#         #context_list = context_str.strip(', ').split(',')
-#             context_list = [v+":None" if ':' not in v else v for v in context_str.strip(', ').split(',')]
-#             processes = [ast.literal_eval(v.split(':')[0].strip()) for v in context_list]
-#             return (processes, ast.literal_eval("{" + ','.join(context_list) + "}"))
-#         except SyntaxError,e:
-#             self.logger.log(log.ERROR, "Wrong context definition format: {0} with error {1}".format(context_str, e))
-#             raise e
-
+            keys = []
             content_dic = ast.literal_eval("{" + context_str.strip(',\t\n ') + "}")
-            return (content_dic.keys(), dict(content_dic))
+            for k in content_dic.keys():
+                keys.append((k, context_str.find(k)))
+            keys = sorted(keys, key=lambda x:x[1])
+            return ([x[0] for x in keys], dict(content_dic))
         except (SyntaxError,ValueError), e:
             self.logger.log(log.ERROR, "Wrong context definition format: {0} with error {1}".format(context_str, e))
             raise e
@@ -163,6 +159,9 @@ class AtomicSpiderBase(object):
         return res
 
     def process(self):
+        """
+        单个节点或爬虫的测试，这个方法可以查看单个爬虫定义是否正确，即验证elems定义是否正确
+        """
         content = html.fromstring(self.download(self.get_url()))
         return self._parser(content, self.elems)
 
@@ -205,7 +204,8 @@ class ProcessNode(AtomicSpiderBase):
                     relative path but ``base`` not define'.format([x[2] for x in rel_nexturls]))
             else:
                 tempelems.update(abs_nexturls)
-                tempelems_with_base.update(rel_nexturls)
+                if tempelems_with_base:
+                    tempelems_with_base.update(rel_nexturls)
                 return tempelems
         else:
             return self.elems
@@ -264,6 +264,9 @@ class ProcessNode(AtomicSpiderBase):
                 yield (item, {})
 
     def pipeline_process(self):
+        """
+        运行整个爬虫处理流
+        """
         content = html.fromstring(self.download(self.get_url()))
         for item, nodes_nexturls in self.parser(content):
             

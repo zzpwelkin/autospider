@@ -1,7 +1,6 @@
 #-*- encoding:UTF8 -*-
-#-*- encoding: UTF8 -*-
 import pymongo
-from spiderframework import log,default_logger
+from spiderflow import log,default_logger
 
 class MongoDBDriver:
     logger = default_logger()

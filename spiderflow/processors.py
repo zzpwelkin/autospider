@@ -3,7 +3,7 @@ import re
 from lxml import html, etree
 
 
-from spiderframework import default_logger, log
+from spiderflow import default_logger, log
 
 _elem_str = lambda elem, encoding: html.tostring(elem) \
         if isinstance(elem, etree.ElementBase) else elem 
