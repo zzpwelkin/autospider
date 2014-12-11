@@ -37,13 +37,17 @@ from spiderflow import ProcessNode
 
 3. 要链接其他爬取节点，就要添加nextnodes属性，语义定义如下:
 
-        nextnodes = [(<node>, <urls>),...]
+        nextnodes = [(<node>, <urls>, <isdata>),...]
             node: ProcessNode子类. 下一个处理的节点
-            urls:<create_url>|<xpath>.传给下一个处理节点的url, 如果是相对xpath路径，则沿用
-            create_url:(<pattern>,<start>,<end>,<step>)
-            pattern: str with ``.*{page}.*`` pattern and page will be replaced with page number
-            start,end,step:number|<xpath>
+            urls:(<xpath>, <process>).传给下一个处理节点的url, 如果是相对xpath路径，则沿用
             xpath: xpath路径语法。如果是相对路径，则用``elems``属性中的``base``元素
             isdata: True/False, 是否需要当前节点处理的数据
             
- 4. 爬虫测试和执行
+4. save属性设置
+       save:={'dirver':<name>, 'param':{params}, 'alias':{alias}}
+            name:=str 驱动名称
+            param:=dict 初始化driver的字典
+            alias:=dict item中字段和保存时的字段重命名
+            
+            
+ 5. 爬虫测试和执行

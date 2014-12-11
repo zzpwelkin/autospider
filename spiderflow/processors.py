@@ -17,11 +17,16 @@ def join(elems, s, encoding='utf-8'):
     return s.join(res)
 
 # string processes
-str_strip = lambda text, s: text.strip(s)
 str_replace = lambda text, olds, news, count=None: text.replace(olds, news, count) \
                 if count else text.replace(olds, news)
 pre_str = lambda text, s: s + text
 post_str = lambda text, s: text + s
+
+def str_strip(text, s):
+    """
+    string strip method
+    """
+    return text.strip(s)
 
 def re_str(text, s):
     res = re.findall(s, text, )
