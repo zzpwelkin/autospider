@@ -10,7 +10,7 @@ class MongoDBDriver:
 
         @param upsert: 当存在名称为_id的字段时，如果该_id存在，
             且upins为True则更新其内容;否则不做更改
-            
+            z
         @param kwargs: Others paramters of mongodb, e.g. socketTimeoutMS, connectTimeoutMS
 
         @return: 文档``_id``
@@ -37,5 +37,5 @@ class MongoDBDriver:
                             upsert=True)
                     self.logger.log(log.INFO, 'Update document of _id {0}'.format(_id))
         else:
-            _id = self._collect.insert(dict(self))
+            _id = self._collect.insert(dict(value))
             self.logger.log(log.INFO, 'Insert value with automatic _id:{0}'.format(_id))
