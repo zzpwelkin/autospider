@@ -115,14 +115,14 @@ class AtomicSpiderBase(object):
                     
                 for p in processes:
                     try:
-                        if isinstance(process_dic[p], (str, type(None), )):
+                        if isinstance(process_dic[p], (str, unicode, type(None), )):
                             #content = self._get_processors(p)(content, process_dic[p])
                             content = process_decorater(p, content, process_dic[p])
                         else:
                             #content = self._get_processors(p)(content, process_dic[p])
                             content = process_decorater(p, content, *process_dic[p])
                     except ValueError, e:
-                        self.logger("Process {0} with value {1} error".format(p, [content, process_dic[p]]))
+                        self.logger.log(log.ERROR, "Process {0} with value {1} error".format(p, [content, process_dic[p]]))
                         raise e
                 return content
         else:
@@ -289,7 +289,7 @@ class ProcessNode(AtomicSpiderBase):
                     
             for node, nexturls in nodes_nexturls.iteritems():
                 for spidercls, _urls, isdata in self.nextnodes:
-                    if isinstance(spidercls, str) and node==spidercls:
+                    if isinstance(spidercls, str) or node==spidercls:
                         if '.' in spidercls:
                             modulestr, classtr = spidercls.rsplit('.', 1)
                         else:
