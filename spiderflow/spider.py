@@ -193,7 +193,7 @@ class ProcessNode(AtomicSpiderBase):
                         return base_dic(v)
                     
         if self.nextnodes:
-            nexturls = [('{0}_NEXTURL'.format(e[0] if isinstance(e[0], str) else e[0].__name__), e[1]) for e in self.nextnodes]
+            nexturls = [('{0}_NEXTURL'.format(e[0] if isinstance(e[0], (str,unicode,)) else e[0].__name__), e[1]) for e in self.nextnodes]
             rel_nexturls, abs_nexturls = [], []
             [abs_nexturls.append(x) if x[1][0].startswith('//') else rel_nexturls.append(x) for x in nexturls]
             
