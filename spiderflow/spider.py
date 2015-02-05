@@ -4,23 +4,29 @@
 ##
 import ast
 # import logging as log
+import inspect
+import importlib
 import sys
+import socket
 
 import requests
 from lxml import html
 
 from spiderflow import Item, Field, log
-from spiderflow import processors, default_logger, save_driver
-# from spiderflow.storage import save_driver
+from spiderflow import processors
+
+from spiderflow.exceptions import DownloadError
 
 # set max recursion number
 sys.setrecursionlimit(3000) 
 
-# def default_logger():
-#     defhandle = log.StreamHandler()
-#     loger = log.Logger('spider')
-#     loger.handlers.append(defhandle)
-#     return loger
+def import_class(name):
+    if '.' in name:
+        modulestr, classtr = name.rsplit('.', 1)
+        return getattr(importlib.import_module( modulestr), classtr)
+        # return getattr(__import__(modulestr),classtr)
+    else:
+        return __import__(name)
 
 class AtomicSpiderBase(object):
     """
@@ -39,7 +45,7 @@ class AtomicSpiderBase(object):
             func:[func_name[:param,...];...]. 元素的处理分为两个过程，1) 返回元素列表选取处理;2)字符串处理
     """
     elems = {}
-    logger = default_logger()
+    logger = log.getLogger('spider')
     
     def __init__(self, url, item=None):
         """
@@ -50,12 +56,22 @@ class AtomicSpiderBase(object):
         self.logger.log(log.INFO, "Start spider {0} with url {1}".format(
                                     self.__class__.__name__, self._url))
 
-    def get_url(self):
+    @property
+    def url(self):
         return self._url
 
-    def download(self, url):
-        req = requests.get(url)
-        return req.text
+    @url.setter
+    def url(self, url):
+        self._url = url
+
+    def download(self):
+        try:
+            req = requests.get(self.url, timeout=10)
+            return req.text
+        except requests.exceptions.RequestException, e:
+            raise DownloadError(e.message)
+        except socket.error, e:
+            raise DownloadError(e.message)
 
     def get_item(self):
         fields = dict([(f,Field()) for f in self.elems.keys() if f!='base'])
@@ -162,10 +178,11 @@ class AtomicSpiderBase(object):
         """
         单个节点或爬虫的测试，这个方法可以查看单个爬虫定义是否正确，即验证elems定义是否正确
         """
-        content = html.fromstring(self.download(self.get_url()))
+        content = html.fromstring(self.download(self.url))
         return self._parser(content, self.elems)
-
-class ProcessNode(AtomicSpiderBase):
+    
+    
+class SpiderNode(AtomicSpiderBase):
     """
     爬虫处理pipeline. 职责: 负责不同爬虫之间的数据链接
     
@@ -180,6 +197,16 @@ class ProcessNode(AtomicSpiderBase):
             isdata: True/False, 是否需要当前节点处理的数据
     """
     nextnodes = []
+
+    def __init__(self, url, item=None, ):
+        super(SpiderNode, self).__init__(url, item)
+        
+                
+    def spider_name(self, spider):
+        if inspect.isclass(spider) and issubclass(spider, SpiderNode):
+            return '.'.join((spider.__module__, spider.__name__))
+        else:
+            return spider
     
     def _reset_elems_with_nexturls(self):
         """  为``elems``添加链接下一些节点的url规则
@@ -193,7 +220,10 @@ class ProcessNode(AtomicSpiderBase):
                         return base_dic(v)
                     
         if self.nextnodes:
-            nexturls = [('{0}_NEXTURL'.format(e[0] if isinstance(e[0], (str,unicode,)) else e[0].__name__), e[1]) for e in self.nextnodes]
+            nexturls = [('{0}_NEXTURL'.format(e[0] if isinstance(e[0], (str,unicode,)) 
+                            else self.spider_name(e[0])), e[1]) 
+                            for e in self.nextnodes]
+            
             rel_nexturls, abs_nexturls = [], []
             [abs_nexturls.append(x) if x[1][0].startswith('//') else rel_nexturls.append(x) for x in nexturls]
             
@@ -262,17 +292,15 @@ class ProcessNode(AtomicSpiderBase):
             else:
                 item.update(x)
                 yield (item, {})
-
-    def pipeline_process(self):
+                
+    def item_save(self, item):
         """
-        运行整个爬虫处理流
+        save item
         """
-        content = html.fromstring(self.download(self.get_url()))
-        for item, nodes_nexturls in self.parser(content):
-            
-            # save item if save node setted
-            saveset = getattr(self,'save',{})
-            dbdriver = save_driver(saveset.get('driver',''))
+        saveset = getattr(self,'save',{})
+        #dbdriver = save_driver(saveset.get('driver',''))
+        if saveset.get('driver', ''):
+            dbdriver = import_class(saveset['driver'])
             
             if dbdriver:
                 dbhandle = dbdriver(**saveset.get('param', {}))
@@ -286,29 +314,45 @@ class ProcessNode(AtomicSpiderBase):
                             dbhandle.save(value)
                 else:
                     dbhandle.save(dict(item))
-                    
+                
+    def next_spider(self, spider):
+        """
+        if the spider ${name} need item data 
+        @return True/False
+        """
+        for spidercls, urls, isdata in self.nextnodes:
+            if self.spider_name(spider) == self.spider_name(spidercls):
+                if isinstance(spidercls, (str, unicode,)):
+                    if '.' in spidercls:
+                        modulestr, classtr = spidercls.rsplit('.', 1)
+                    else:
+                        modulestr, classtr = self.__class__.__module__, spidercls
+                    spidercls = getattr(__import__(modulestr),classtr)
+                return spidercls, urls, isdata
+            
+        raise ValueError("The spider of {0} not in nextnodes of spidernode {1}".format(
+                        self.spider_name(spider), self.__class__.__name__))
+
+    def pipeline_process(self):
+        """
+        运行整个爬虫处理流
+        """
+        content = html.fromstring(self.download())
+        for item, nodes_nexturls in self.parser(content):
+             
+            # save item if save node setted
+            self.item_save(item)
+                     
             for node, nexturls in nodes_nexturls.iteritems():
-                for spidercls, _urls, isdata in self.nextnodes:
-                    if isinstance(spidercls, str) or node==spidercls:
-                        if '.' in spidercls:
-                            modulestr, classtr = spidercls.rsplit('.', 1)
-                        else:
-                            modulestr, classtr = self.__class__.__module__, spidercls
-                        spidercls = getattr(__import__(modulestr),classtr)
-                        
-                        if not issubclass(spidercls, ProcessNode):
-                            raise TypeError('{0} is not subclass of \
-                                    ProcessNode'.format(spidercls))
-                    elif node != spidercls.__name__:
-                        continue
-     
+                    spidercls, _, isdata = self.next_spider(node)
+      
                     # log spider info
                     self.logger.log(log.INFO, 'Next spider: {0}'.format(spidercls.__name__))
                     nurls = [nexturls,] if isinstance(nexturls, (str, type(None))) else nexturls
-     
+      
                     # log info
                     self.logger.log(log.INFO, 'Next urls: {0}'.format(nurls))
-                     
+                      
                     nitem = None if not isdata else item
                     for nurl in nurls:
                         if nurl:
@@ -317,5 +361,79 @@ class ProcessNode(AtomicSpiderBase):
                         else:
                             self.logger.log(log.INFO, 
                                 "Null url for spider {0} directed by url {1} of spider {2}".format(spidercls.__name__, 
-                                                                                                   self.get_url(), 
+                                                                                                   self.url, 
                                                                                                    self.__class__.__name__, ))
+
+class AsyncSpiderProcess:
+    """
+    异步方式处理爬虫pipeline. 职责: 负责不同爬虫之间的数据通信
+    """
+    queue = None
+    spiders = {}
+    
+    # start urls of spier flows and elements with format (spidername, url) 
+    start_urls = []
+    
+    logger = log.getLogger('spiderprocess')
+    def __init__(self, queue, start_urls=[]):
+        self.queue = queue
+        self.start_urls = start_urls
+        self.init_process()
+        
+    def init_process(self):
+        for s, url in self.start_urls:
+            self.queue.put(url, prespider=None, nextspider=s, item=None)
+        pass
+    
+    def start(self):
+        """
+        运行整个爬虫处理流
+        """
+        def get_spider_class(name):
+            if '.' in name:
+                modulestr, classtr = name.rsplit('.', 1)
+            else:
+                modulestr, classtr = self.__class__.__module__, name
+            spidercls = getattr(__import__(modulestr),classtr)
+            
+            if not issubclass(spidercls, SpiderNode):
+                raise TypeError('{0} is not subclass of \
+                        ProcessNode'.format(spidercls))
+                
+            return spidercls
+        
+        while(len(self.queue)):
+            url, _ps, s, item = self.queue.poll()
+            if s in self.spiders:
+                spd = self.spiders[s]
+                spd.url = url
+                if item:
+                    spd.item.update(item)
+            else:
+                spd = get_spider_class(s)(url, item)
+                self.spiders[s] = spd
+                
+            # down load page
+            try:
+                repcont = spd.download()
+            except DownloadError:
+                self.queue.put(url, _ps, s, item)
+                self.logger(log.INFO, 'Exception raised when download url {0} and was reinstered to queue'.format(url))
+                continue
+                
+            content = html.fromstring(repcont)
+            for item, nodes_nexturls in spd.parser(content):
+                spd.item_save(item)
+                
+                # insert next spider to queue 
+                for node, nexturls in nodes_nexturls.iteritems():
+                        nurls = [nexturls,] if isinstance(nexturls, (str, type(None))) else nexturls
+                         
+                        nitem = None if not spd.next_spider(node)[2] else item
+                        
+                        for nurl in nurls:
+                            if nurl:
+                                self.queue.put(nurl, spd.__class__.__name__, node, nitem)
+                            else:
+                                self.logger(log.INFO,"Null url for spider {0} directed by url {1} of spider {2}".format(
+                                                    node, spd.url, spd.__class__.__name__, ))

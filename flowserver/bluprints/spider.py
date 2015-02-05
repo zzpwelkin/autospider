@@ -1,6 +1,6 @@
 # -*- encoding:utf-8 -*-
 import inspect
-from flask import request, Blueprint, jsonify
+from flask import Blueprint, jsonify
 from spiderflow import processors, storage
 
 spider_info = Blueprint('spider_info', __name__)

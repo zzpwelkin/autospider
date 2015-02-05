@@ -1,9 +1,9 @@
 #-*- encoding:UTF8 -*-
 import pymongo
-from spiderflow import log,default_logger
+from spiderflow import log
 
 class MongoDBDriver:
-    logger = default_logger()
+    logger = log.getLogger('storage')
     def __init__(self, host='localhost', port=27017, db='test', collection='collection', **kwargs):
         """
         如果存在名称为_id的字段，则使用此字段中的值为documents的_id

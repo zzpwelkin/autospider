@@ -2,7 +2,7 @@
 
 import os
 import sys
-import tempfile
+# import tempfile
 from unittest import main as testmain
 from unittest import TestCase
 
@@ -18,8 +18,8 @@ print app.root_path
 app.config['TESTING'] = True
 
 # 设置测试的爬虫服务目录
-app.config['SPIDERFLOWSDIR'] = tempfile.mkdtemp('spiderflow', 
-                dir='/tmp')
+# app.config['SPIDERFLOWSDIR'] = tempfile.mkdtemp('spiderflow', 
+#                 dir='/tmp')
 
 c = app.test_client()
 
@@ -95,7 +95,7 @@ class FlowTest(TestCase):
     'save':{'driver':'mongodb', 'param':{'db':'a', 'collection':'models'}, 'alias':{'url':'_id'}},
     }
     ]
-        resp = c.post('/newspiderflow/bitauto/')
+        c.post('/newspiderflow/bitauto/')
         resp = c.post('/spiderflowexec/bitauto/?url=http://car.bitauto.com/qichepinpai/',
               data = json.dumps(spdflow), content_type='application/json')
         self.assert_(200 == resp.status_code, 

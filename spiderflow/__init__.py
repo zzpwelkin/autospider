@@ -1,20 +1,36 @@
 import logging as log
 
-def default_logger():
-    defhandle = log.StreamHandler()
-    loger = log.Logger('myspider')
-    loger.handlers.append(defhandle)
-    return loger
+def set_logger(conf=None):
+    from logging import config
+    if not conf:
+        from .default_settings import LOGGER
+        config.dictConfig(LOGGER)
+    else:
+        config.dictConfig(conf)
+        
+set_logger()
 
-def save_driver(db):
-    from .storage import MongoDBDriver
-    driver = {'mongodb':MongoDBDriver, }
-    return driver.get(db, None)
-
-def urls_check_queue():
-    pass
+# conf = {}
+# 
+# def settings(**kwargs):
+#     for k, v in kwargs.iteritems(): 
+#         if isinstance(v, dict):
+#             if not conf.get(k, None):
+#                 conf[k] = v
+#             else:
+#                 conf[k].update(dict)
+#         elif isinstance(v, (list, tuple,)):
+#             if not conf.get(k, None):
+#                 if isinstance(v, tuple) or isinstance(conf[k], tuple):
+#                     conf[k] = conf[k] + v
+#                 conf[k].append(v)
+#             else:
+#                 conf[k] = v
+#         else:
+#             conf[k] = v 
 
 from .item import Field, Item
-from .spider import ProcessNode
+from .spider import SpiderNode, AsyncSpiderProcess
+from .queue import SpiderQueue
 
-__all__ = ['Field', 'Item', 'ProcessNode','log', 'default_logger', 'save_driver']
+__all__ = ['Field', 'Item', 'SpiderNode', 'AsyncSpiderProcess', 'SpiderQueue', 'log']

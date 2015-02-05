@@ -2,8 +2,9 @@ import datetime
 import re
 from lxml import html, etree
 
+from spiderflow import log
 
-from spiderflow import default_logger, log
+logger = log.getLogger('process')
 
 _elem_str = lambda elem, encoding: html.tostring(elem) \
         if isinstance(elem, etree.ElementBase) else elem 
@@ -51,7 +52,7 @@ def eva_pages(text, pattern, start, step):
             res.append(''.join((pre_str, pattern.format(page=i), post_str)))
         return res
     else:
-        default_logger().log(log.WARN, u'Page number {0} with pattern {1} from {2} is not a number and source text was returned'.format(lastpage, pattern, text))
+        logger.log(log.WARN, u'Page number {0} with pattern {1} from {2} is not a number and source text was returned'.format(lastpage, pattern, text))
         return text
 
 # def date(text, loader_context):
