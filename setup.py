@@ -16,11 +16,12 @@ setup(
     description = ("Spider flow framework"),
     license = "BSD",
     keywords = "crawler spider framework",
-    packages=['spiderflow', 'flowserver'],
+    packages=['spiderflow', 'spiderflow.storage', 'flowserver'],
     long_description=read('README.md'),
     install_requires =["Flask==0.10.1", # micro web framework
                     "requests", # web client
                     "pymongo", # mongodb python client
+                    "sqlalchemy>=0.9", # orm
                     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
