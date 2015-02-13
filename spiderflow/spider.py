@@ -8,6 +8,7 @@ import inspect
 import importlib
 import sys
 import socket
+from inspect import isclass
 
 import requests
 from lxml import html
@@ -45,6 +46,10 @@ class AtomicSpiderBase(object):
             func:[func_name[:param,...];...]. 元素的处理分为两个过程，1) 返回元素列表选取处理;2)字符串处理
     """
     elems = {}
+    
+    # 如果为空则自动识别获取内容后的编码
+    content_encode = None
+    
     logger = log.getLogger('spider')
     
     def __init__(self, url, item=None):
@@ -67,7 +72,8 @@ class AtomicSpiderBase(object):
     def download(self):
         try:
             req = requests.get(self.url, timeout=10)
-            return req.text
+            return req.content.decode(self.content_encode) \
+                if self.content_encode else req.text
         except requests.exceptions.RequestException, e:
             raise DownloadError(e.message)
         except socket.error, e:
@@ -178,7 +184,7 @@ class AtomicSpiderBase(object):
         """
         单个节点或爬虫的测试，这个方法可以查看单个爬虫定义是否正确，即验证elems定义是否正确
         """
-        content = html.fromstring(self.download(self.url))
+        content = html.fromstring(self.download())
         return self._parser(content, self.elems)
     
     
@@ -187,13 +193,9 @@ class SpiderNode(AtomicSpiderBase):
     爬虫处理pipeline. 职责: 负责不同爬虫之间的数据链接
     
     Attribute: 
-        nextnodes = [(<node>, <urls>),...]
+        nextnodes = [(<node>, <urls>, <isdata>),...]
             node: ProcessNode子类. 下一个处理的节点
-            urls:<create_url>|<xpath>.传给下一个处理节点的url, 如果是相对xpath路径，则沿用
-            create_url:(<pattern>,<start>,<end>,<step>)
-            pattern: str with ``.*{page}.*`` pattern and page will be replaced with page number
-            start,end,step:number|<xpath>
-            xpath: xpath路径语法。如果是相对路径，则用``elems``属性中的``base``元素
+            urls:(<xpath>, <regex>, <process>).传给下一个处理节点的url, 如果是相对xpath路径，则沿用`elems`元素中的`base`定义的元素
             isdata: True/False, 是否需要当前节点处理的数据
     """
     nextnodes = []
@@ -297,10 +299,11 @@ class SpiderNode(AtomicSpiderBase):
         """
         save item
         """
-        saveset = getattr(self,'save',{})
-        #dbdriver = save_driver(saveset.get('driver',''))
-        if saveset.get('driver', ''):
-            dbdriver = import_class(saveset['driver'])
+        def save(saveset):
+            if isclass(saveset['driver']):
+                dbdriver = saveset['driver']
+            else:
+                dbdriver = import_class(saveset['driver'])
             
             if dbdriver:
                 dbhandle = dbdriver(**saveset.get('param', {}))
@@ -314,6 +317,17 @@ class SpiderNode(AtomicSpiderBase):
                             dbhandle.save(value)
                 else:
                     dbhandle.save(dict(item))
+                    
+        saveset = getattr(self,'save',{})
+        if not saveset:
+            return
+        
+        #dbdriver = save_driver(saveset.get('driver',''))
+        if isinstance(saveset, (list, tuple)):
+            for sconf in saveset:
+                save(sconf)
+        else:
+            save(saveset)
                 
     def next_spider(self, spider):
         """
@@ -410,7 +424,7 @@ class AsyncSpiderProcess:
                 if item:
                     spd.item.update(item)
             else:
-                spd = get_spider_class(s)(url, item)
+                spd = s(url, item) if isclass(s) else get_spider_class(s)(url, item)
                 self.spiders[s] = spd
                 
             # down load page
