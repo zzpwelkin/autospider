@@ -432,7 +432,7 @@ class AsyncSpiderProcess:
                 repcont = spd.download()
             except DownloadError:
                 self.queue.put(url, _ps, s, item)
-                self.logger(log.INFO, 'Exception raised when download url {0} and was reinstered to queue'.format(url))
+                self.logger.log(log.INFO, 'Exception raised when download url {0} and was reinstered to queue'.format(url))
                 continue
                 
             content = html.fromstring(repcont)
@@ -449,5 +449,5 @@ class AsyncSpiderProcess:
                             if nurl:
                                 self.queue.put(nurl, spd.__class__.__name__, node, nitem)
                             else:
-                                self.logger(log.INFO,"Null url for spider {0} directed by url {1} of spider {2}".format(
+                                self.logger.log(log.INFO,"Null url for spider {0} directed by url {1} of spider {2}".format(
                                                     node, spd.url, spd.__class__.__name__, ))
