@@ -22,6 +22,7 @@ str_replace = lambda text, olds, news, count=None: text.replace(olds, news, coun
                 if count else text.replace(olds, news)
 pre_str = lambda text, s: s + text
 post_str = lambda text, s: text + s
+none_to_str = lambda text, default: default if text is None else text
 
 def str_strip(text, s):
     """
@@ -44,7 +45,11 @@ def pre_url(text, s):
     return pre_url + text
 
 # page evaluate process
-def eva_pages(text, pattern, start, step):
+def eva_pages(text, pattern, start, step=1):
+    """
+    text: last page url
+    pattern:
+    """
     res = []
     pre_str, lastpage, post_str = re.split(pattern.replace('{page}', '(\d+)'), text)
     if lastpage.isdigit():
