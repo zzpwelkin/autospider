@@ -1,9 +1,10 @@
 #-*- encoding:UTF8 -*-
 import pymongo
-from spiderflow import log
+#from spiderflow import log
+from . import StorageBase
 
-class MongoDBDriver:
-    logger = log.getLogger('storage')
+class MongoDBDriver(StorageBase):
+    #logger = log.getLogger('storage')
     def __init__(self, host='localhost', port=27017, db='test', collection='collection', **kwargs):
         """
         如果存在名称为_id的字段，则使用此字段中的值为documents的_id
@@ -28,14 +29,14 @@ class MongoDBDriver:
         if '_id' in value.keys():
             try:
                 self._collect.insert(value)
-                self.logger.log(log.INFO, 'Insert document with _id {0}'.format(value['_id']))
+                self.logger.info('Insert document with _id {0}'.format(value['_id']))
             except pymongo.errors.DuplicateKeyError:
                 if self._param.get('upsert',False):
                     v = value
                     _id = v.pop('_id')
                     self._collect.update({'_id':_id}, {'$set':v}, \
                             upsert=True)
-                    self.logger.log(log.INFO, 'Update document of _id {0}'.format(_id))
+                    self.logger.info('Update document of _id {0}'.format(_id))
         else:
             _id = self._collect.insert(dict(value))
-            self.logger.log(log.INFO, 'Insert value with automatic _id:{0}'.format(_id))
+            self.logger.info('Insert value with automatic _id:{0}'.format(_id))

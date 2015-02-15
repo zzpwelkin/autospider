@@ -2,15 +2,21 @@
 #-*- encoding:utf8 -*-
 import codecs
 
-class ConsoleStream:
+from . import StorageBase
+
+class ConsoleStream(StorageBase):
 
     def _print(self, value):
-        print u' '.join([u':'.join(x if x[1] else (x[0], '')) for x in value.iteritems()])
+        str = u'values: {'+ \
+            u' '.join([u':'.join(x if x[1] else (x[0], '')) for x in value.iteritems()])+ \
+            u'}'
+            
+        print str
         
     def save(self, value):
         self._print(value)
         
-class FileStream:
+class FileStream(StorageBase):
     """
     fw: an object of file
     write: write method
