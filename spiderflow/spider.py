@@ -13,7 +13,7 @@ from inspect import isclass
 import requests
 from lxml import html
 
-from spiderflow import Item, Field, log
+from spiderflow import Field, log
 from spiderflow import processors
 
 from spiderflow.exceptions import DownloadError
@@ -81,18 +81,18 @@ class AtomicSpiderBase(object):
 
     def get_item(self):
         fields = dict([(f,Field()) for f in self.elems.keys() if f!='base'])
-        itemname = self.__class__.__name__+'ItemClass'
+        #itemname = self.__class__.__name__+'ItemClass'
         if not self.item:
-            return type(itemname, (Item,), fields)()
+            return fields 
         else:
-            if len(set(fields.keys()) - set(self.item.fields.keys())) \
+            if len(set(fields.keys()) - set(self.item.keys())) \
                 != len(fields.keys()):
                 raise ValueError('Conflict of fileds {0} '.format(
                     set(fields.keys()) - (set(fields.keys()) - 
-                                          set(self.item.fields.keys())))) 
-            fields.update(self.item.fields)
-            nitemtype = type(itemname, (Item,), fields)
-            return nitemtype(dict(self.item))
+                                          set(self.item.keys())))) 
+            fields.update(self.item)
+            #nitemtype = type(itemname, (Item,), fields)
+            return fields
         
     def _loader_context(self, context_str):
         try:
