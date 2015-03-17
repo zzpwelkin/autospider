@@ -149,7 +149,16 @@ class AtomicSpiderBase(object):
                 return content
         else:
             content = etreenode.xpath(path)
-            return processors.first(content) if content else None
+            if content:
+                content = processors.first(content)
+                try:
+                    content = str(content)
+                except UnicodeEncodeError:
+                    content = unicode(content)
+            else:
+                content = None
+                
+            return content
         
     def _elems_parse(self, etreenode, fields=[], elemcont={}):
         res = {}
