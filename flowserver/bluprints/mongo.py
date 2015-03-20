@@ -2,7 +2,7 @@
 from pymongo import MongoClient
 from flask import request, Blueprint
 
-from spiderflow import ProcessNode
+from spiderflow import SpiderNode
 
 class MGBlueprint(Blueprint):
     
@@ -25,7 +25,7 @@ def get_spiderflow(workspace, nodename):
     print nddef
     if isinstance(nodename, unicode):
         nodename = nodename.encode('utf-8')
-    spdcls = type(nodename, (ProcessNode, ), nddef)
+    spdcls = type(nodename, (SpiderNode, ), nddef)
     spdflow[nodename] = spdcls
     if hasattr(spdcls, 'nextnodes'):
         for nddef in spdcls.nextnodes:

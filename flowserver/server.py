@@ -7,7 +7,7 @@
 
 from flask import Flask, request, json
 from bluprints import spider
-from spiderflow import ProcessNode
+from spiderflow import SpiderNode
 
 # 定义服务application
 app = Flask(__name__)
@@ -33,7 +33,7 @@ def spiderexec(spidername):
             res = []
             if isinstance(spidername, unicode):
                 spidername = spidername.encode('utf-8')
-            spdcls = type(spidername, (ProcessNode, ), 
+            spdcls = type(spidername, (SpiderNode, ), 
                     {'elems':request.json})
             
             for x in spdcls(request.args['url']).process():
