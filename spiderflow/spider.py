@@ -441,7 +441,7 @@ class AsyncSpiderProcess:
                 repcont = spd.download()
             except DownloadError:
                 self.queue.put(url, _ps, s, item)
-                self.logger.log(log.INFO, 'Exception raised when download url {0} and was reinstered to queue'.format(url))
+                self.logger.log(log.INFO, 'Exception raised when download url {0} and was reinserted to queue'.format(url))
                 continue
                 
             content = html.fromstring(repcont)
