@@ -31,6 +31,6 @@ set_logger()
 
 from .item import Field, Item
 from .spider import SpiderNode, AsyncSpiderProcess
-from .queue import MemoryQueue
+from .queue import MemoryListQueue, MemorySetQueue
 
-__all__ = ['Field', 'Item', 'SpiderNode', 'AsyncSpiderProcess', 'MemoryQueue', 'log']
+__all__ = ['Field', 'Item', 'SpiderNode', 'AsyncSpiderProcess', 'MemoryListQueue', 'MemorySetQueue', 'log']
