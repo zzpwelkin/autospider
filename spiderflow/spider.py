@@ -17,6 +17,7 @@ from spiderflow import Field, log
 from spiderflow import processors
 
 from spiderflow.exceptions import DownloadError
+from docutils.transforms.peps import Headers
 
 # set max recursion number
 sys.setrecursionlimit(3000) 
@@ -47,8 +48,18 @@ class AtomicSpiderBase(object):
     """
     elems = {}
     
-    # 如果为空则自动识别获取内容后的编码
+    ## download function arguments
+    # response content encoding.
     content_encode = None
+    
+    # request headers
+    headers = {}
+    
+    # request cookies. 
+    cookies = {}
+    
+    # request timeout
+    request_timeout = 10
     
     logger = log.getLogger('spider')
     
@@ -71,7 +82,12 @@ class AtomicSpiderBase(object):
 
     def download(self):
         try:
-            req = requests.get(self.url, timeout=10)
+            param = {'url':self.url, 'timeout': self.request_timeout}
+            if self.headers:
+                param['headers'] = self.headers
+            if self.cookies:
+                param['cookies'] = self.cookies
+            req = requests.get(**param)
             return req.content.decode(self.content_encode) \
                 if self.content_encode else req.text
         except requests.exceptions.RequestException, e:
@@ -417,6 +433,7 @@ class AsyncSpiderProcess:
                 modulestr, classtr = name.rsplit('.', 1)
             else:
                 modulestr, classtr = self.__class__.__module__, name
+                
             spidercls = getattr(__import__(modulestr),classtr)
             
             if not issubclass(spidercls, SpiderNode):
@@ -430,6 +447,8 @@ class AsyncSpiderProcess:
             if s in self.spiders:
                 spd = self.spiders[s]
                 spd.url = url
+                spd.logger.log(log.INFO, "Start spider {0} with url {1}".format(
+                                    spd.__class__.__name__, spd._url))
                 if item:
                     spd.item.update(item)
             else:
@@ -452,11 +471,12 @@ class AsyncSpiderProcess:
                 for node, nexturls in nodes_nexturls.iteritems():
                         nurls = [nexturls,] if isinstance(nexturls, (str, type(None))) else nexturls
                          
-                        nitem = None if not spd.next_spider(node)[2] else item
+                        _node, _url, _isdata = spd.next_spider(node)
+                        nitem = None if not _isdata else item
                         
                         for nurl in nurls:
                             if nurl:
-                                self.queue.put(nurl, spd.__class__.__name__, node, nitem)
+                                self.queue.put(nurl, spd.__class__.__name__, _node, nitem)
                             else:
                                 self.logger.log(log.INFO,"Null url for spider {0} directed by url {1} of spider {2}".format(
                                                     node, spd.url, spd.__class__.__name__, ))
