@@ -23,6 +23,11 @@ setup(
                     "pymongo", # mongodb python client
                     "sqlalchemy>=0.9", # orm
                     ],
+                    entry_points={
+                                            'console_scripts': [
+            'proxyutil = spiderflow.proxyutil:main',
+        ],
+                                    },
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Topic :: Framework",

@@ -1,7 +1,7 @@
 from exceptions import NotImplementedError
 from spiderflow import log
 
-class StorageBase:
+class StorageBase(object):
     logger = log.getLogger('storage')
     
     def save(self, value):
